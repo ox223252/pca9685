@@ -1,0 +1,9 @@
+@ after INIT_VAR
+	int pca9685 = 0;
+@ afetr END_CORE
+	// INIT_PCA9685
+	if ( openPCA9685 ( "/dev/i2c-1", 0x40, &pca9685 ) )
+	{ // failure case
+	}
+	// END_PCA9685
+	
