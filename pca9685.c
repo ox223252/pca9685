@@ -318,15 +318,16 @@ static int configPCA9685 ( const registers mode, const uint32_t configMask, cons
 			}
 			return ( write ( pca9685Fd, buf, 2 ) != 2 );
 		}
+		default:
+		{
+			break;
+		}
 	}
 	return ( 1 );
 }
 
 int openPCA9685 ( const char busName[], const uint8_t address, int * const pca9685Fd )
 {
-	uint8_t buf[ 2 ] = { 0 }; //buffer to store data needed to be sent
-	int rt = 0; // return value
-
 	*pca9685Fd = open ( busName, O_RDWR );
 	if ( *pca9685Fd < 0 )
 	{
