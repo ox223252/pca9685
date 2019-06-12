@@ -4,13 +4,11 @@
 	// INIT_PCA9685
 	#ifdef __CONFIG_ARG_H__
 		if ( openPCA9685 ( pca9685_i2c, pca9685_addr, &pca9685_fd ) )
-		{ // failure case
-		}
 	#else
-		openPCA9685 ( "/dev/i2c-1", 0x40, &pca9685_fd )
-		{ // failure case
-		}
+		if ( openPCA9685 ( "/dev/i2c-1", 0x40, &pca9685_fd ) )
 	#endif
+	{ // failure case
+	}
 
 	#ifdef __FREEONEXIT_H__
 		if ( setCloseOnExit ( pca9685_fd ) )
