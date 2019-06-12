@@ -1,9 +1,28 @@
 @ after INIT_VAR
-	int pca9685 = 0;
-@ afetr END_CORE
+	int pca9685_fd = 0;
+@ afetr END_CONFIG
 	// INIT_PCA9685
-	if ( openPCA9685 ( "/dev/i2c-1", 0x40, &pca9685 ) )
-	{ // failure case
-	}
+	#ifdef __CONFIG_ARG_H__
+		if ( openPCA9685 ( pca9685_i2c, pca9685_addr, &pca9685_fd ) )
+		{ // failure case
+		}
+	#else
+		openPCA9685 ( "/dev/i2c-1", 0x40, &pca9685_fd )
+		{ // failure case
+		}
+	#endif
+
+	#ifdef __FREEONEXIT_H__
+		if ( setCloseOnExit ( pca9685_fd ) )
+		{ // failure case
+
+		}
+	#endif
 	// END_PCA9685
-	
+
+@ after END_PROGRAM
+	// RELEASE_PCA9685
+	#ifdef __FREEONEXIT_H__
+		unsetCloseOnExit ( pca9685_fd );
+	#endif
+	closePCA9685 ( pca9685_fd );
