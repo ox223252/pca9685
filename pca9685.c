@@ -38,8 +38,18 @@
 
 #include "pca9685.h"
 
-const float clock = 25000000.0;
+const float pcaClock = 25000000.0;
 const uint16_t periode = 4096;
+
+#ifdef MCP_WITH_THREAD
+static pthread_mutex_t * busMutex;
+static int oldStatus = 0;
+#define LOCK_MUTEX if(busMutex){pthread_mutex_lock(busMutex);pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,&oldStatus);}
+#define UNLOCK_MUTEX if(busMutex){pthread_mutex_unlock(busMutex);pthread_setcancelstate(oldStatus,NULL);}
+#else
+#define LOCK_MUTEX
+#define UNLOCK_MUTEX
+#endif
 
 typedef enum
 {
@@ -175,6 +185,8 @@ static int configPCA9685 ( const registers mode, const uint32_t configMask, cons
 	uint8_t buf[ 2 ] = { 0 };
 	uint32_t i = 0; // loop counter
 
+	LOCK_MUTEX;
+
 	if ( configMask == 0 )
 	{
 		buf[ 0 ] = mode;
@@ -272,6 +284,9 @@ static int configPCA9685 ( const registers mode, const uint32_t configMask, cons
 					}
 				}
 			}
+
+			UNLOCK_MUTEX;
+
 			return ( write ( pca9685Fd, buf, 2 ) != 2 );
 		}
 		case MODE2:
@@ -316,6 +331,9 @@ static int configPCA9685 ( const registers mode, const uint32_t configMask, cons
 			{ // invert output
 				buf[ 1 ] |= INVRT;
 			}
+
+			UNLOCK_MUTEX;
+
 			return ( write ( pca9685Fd, buf, 2 ) != 2 );
 		}
 		default:
@@ -323,11 +341,16 @@ static int configPCA9685 ( const registers mode, const uint32_t configMask, cons
 			break;
 		}
 	}
+
+	UNLOCK_MUTEX;
+
 	return ( 1 );
 }
 
 int openPCA9685 ( const char busName[], const uint8_t address, int * const pca9685Fd )
 {
+	LOCK_MUTEX;
+
 	*pca9685Fd = open ( busName, O_RDWR );
 	if ( *pca9685Fd < 0 )
 	{
@@ -338,6 +361,8 @@ int openPCA9685 ( const char busName[], const uint8_t address, int * const pca96
 	{
 		return ( __LINE__ );
 	}
+
+	UNLOCK_MUTEX;
 
 	if ( configPCA9685 ( MODE1, 0, *pca9685Fd ) )
 	{
@@ -365,12 +390,14 @@ int closePCA9685 ( const int pca9685Fd )
 int setPCA9685PWMFreq ( const int freq, const int pca9685Fd )
 {
 	uint8_t buf[ 2 ] = { 0 };
-	uint8_t prescale_val = ( uint32_t )( clock / periode / freq )  - 1;
+	uint8_t prescale_val = ( uint32_t )( pcaClock / periode / freq )  - 1;
 
 	if ( configPCA9685 ( MODE1, SLEEP_ON | ALLCALL_OFF | AI_ON, pca9685Fd ) )
 	{
 		return ( __LINE__ );
 	}
+
+	LOCK_MUTEX;
 
 	buf[ 0 ] = PRE_SCALE; // prescaler register
 	buf[ 1 ] = prescale_val; // multiplyer for PWM frequency
@@ -378,6 +405,8 @@ int setPCA9685PWMFreq ( const int freq, const int pca9685Fd )
 	{
 		return ( __LINE__ );
 	}
+
+	UNLOCK_MUTEX;
 
 	if ( configPCA9685 ( MODE1, SLEEP_OFF, pca9685Fd ) )
 	{
@@ -401,5 +430,24 @@ int setPCA9685PWM ( const uint8_t id, const uint16_t on_value, const uint16_t of
 	buf[ 2 ] = on_value >> 8; // MSB ON value
 	buf[ 3 ] = off_value & 0xFF; // LSB OFF value
 	buf[ 4 ] = off_value >> 8; // MSB OFF value
-	return ( write ( pca9685Fd, buf, 5 ) != 5 );
+
+	LOCK_MUTEX;
+
+	int result = write ( pca9685Fd, buf, 5 );
+
+	UNLOCK_MUTEX;
+
+	return ( result != 5 );
 }
+
+#ifdef PCA_WITH_THREAD
+void setPCA9685BusMutex ( pthread_mutex_t * const mutex )
+{
+	busMutex = mutex;
+}
+
+void clearPCA9685BusMutex ( void )
+{
+	busMutex = NULL;
+}
+#endif

@@ -19,13 +19,17 @@
 
 #include <stdint.h>
 
+#ifdef PCA_WITH_THREAD
+#include <pthread.h>
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 /// \file pca9685.h
 /// \brief library used to manage pca9685 micro
 /// \author ox223252
 /// \date 2018-03
 /// \copyright GPLv2
-/// \version 0.1
+/// \version 0.2
 /// \warning NONE
 /// \bug NONE
 ////////////////////////////////////////////////////////////////////////////////
@@ -75,5 +79,21 @@ int setPCA9685PWMFreq ( const int freq, const int pca9685Fd );
 ////////////////////////////////////////////////////////////////////////////////
 int setPCA9685PWM ( const uint8_t id, const uint16_t on_value, 
 	const uint16_t off_value, const int pca9685Fd );
+
+#ifdef PCA_WITH_THREAD
+////////////////////////////////////////////////////////////////////////////////
+/// \fn void setPCA9685BusMutex ( pthread_mutex_t * const mutex )
+/// \param[ in ] mutex: pointer on mutex
+/// \biref set a mutex for the PCA busif multiple bus used for multiple PCA, you
+///     should set mutex each time is needed or manage mutex manualy
+////////////////////////////////////////////////////////////////////////////////
+void setPCA9685BusMutex ( pthread_mutex_t * const mutex );
+
+////////////////////////////////////////////////////////////////////////////////
+/// \fn void clearPCA9685BusMutex ( void );
+/// \brief clear mutex set for PCA bus
+////////////////////////////////////////////////////////////////////////////////
+void clearPCA9685BusMutex ( void );
+#endif
 
 #endif
